@@ -28,6 +28,9 @@ from PyQt5.QtWidgets import (QApplication, QWidget, QLabel, QScrollArea,
                              QGroupBox, QFormLayout, QComboBox,
                              QDialogButtonBox, QVBoxLayout, QCheckBox)
 from PyQt5.QtGui import QIcon, QPixmap
+import tempfile
+import os
+import platform
 import subprocess
 import re
 import csv
@@ -60,6 +63,7 @@ class PointSignals(dict):
             if b in sd:
                 return sd[b].rssi
         return [get_rssi(self, b) for b in bssids]
+
 
 class Signals(object):
     """All wireless AP signal information, sorted by bssid and position"""
@@ -102,8 +106,26 @@ class Signals(object):
             add_point_signals(pos, p)
 
 
-class AirportQuery(object):
+class WifiQuery(object):
     def get_signals(self):
+        try:
+            func = getattr(self, '_%s_get_signals' % platform.system().lower())
+        except AttributeError:
+            raise Exception('get_signals not implemented for %s' % platform.system())
+        return func()
+
+    def _windows_get_signals(self):
+        temp_name = '%s/%s' % (tempfile._get_default_tempdir(), next(tempfile._get_candidate_names()))
+        returnCode = subprocess.call(['WifiInfoView.exe', '/NumberOfScans', '1', '/scomma', temp_name])
+        p = PointSignals()
+        with open(temp_name) as csv_file:
+            for n in csv.DictReader(csv_file, delimiter=',', quotechar='"'):
+                s = Signal(ssid=n['SSID'], bssid=n['MAC Address'], rssi=int(n['RSSI']))
+                p.add_signal(s)
+        os.remove(temp_name)
+        return p
+
+    def _darwin_get_signals(self):
         out = subprocess.check_output(['/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', '-s'], universal_newlines=True)
         p = PointSignals()
         for ssid, bssid, rssi in re.findall(
@@ -112,12 +134,13 @@ class AirportQuery(object):
             p.add_signal(s)
         return p
 
+
 class FloorPlan(QLabel):
     def __init__(self, parent=None):
         super().__init__(parent)
         pixmap = QPixmap()
         self.setPixmap(pixmap)
-        self.q = AirportQuery()
+        self.q = WifiQuery()
         self._signals = Signals()
 
         self.setCursor(Qt.CrossCursor)
@@ -135,6 +158,7 @@ class FloorPlan(QLabel):
         label.setToolTip(ps.get_text())
         label.move(*pos)
         label.show()
+
 
 class ChooseHeatmapDialog(QDialog):
     def __init__(self, signals):
