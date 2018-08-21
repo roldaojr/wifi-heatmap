@@ -115,15 +115,14 @@ class WifiQuery(object):
         return func()
 
     def _windows_get_signals(self):
-        temp_name = '%s/%s' % (tempfile._get_default_tempdir(), next(tempfile._get_candidate_names()))
-        returnCode = subprocess.call(['WifiInfoView.exe', '/NumberOfScans', '1', '/scomma', temp_name])
         p = PointSignals()
-        with open(temp_name) as csv_file:
-            for n in csv.DictReader(csv_file, delimiter=',', quotechar='"'):
-                s = Signal(ssid=n['SSID'], bssid=n['MAC Address'], rssi=int(n['RSSI']))
+        from pywiwi.WindowsWifi import getWirelessInterfaces, getWirelessNetworkBssList
+        for iface in getWirelessInterfaces():
+            for cell in getWirelessNetworkBssList(iface):
+                s = Signal(ssid=str(cell.ssid), bssid=cell.bssid, rssi=cell.rssi)
                 p.add_signal(s)
-        os.remove(temp_name)
         return p
+
 
     def _darwin_get_signals(self):
         out = subprocess.check_output(['/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', '-s'], universal_newlines=True)
