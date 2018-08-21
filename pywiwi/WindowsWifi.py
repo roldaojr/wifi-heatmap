@@ -21,8 +21,8 @@
 
 from ctypes import *
 from comtypes import GUID
-from WindowsNativeWifiApi import *
-from compat import indexbytes
+from .WindowsNativeWifiApi import *
+from .compat import indexbytes
 
 NULL = None
 

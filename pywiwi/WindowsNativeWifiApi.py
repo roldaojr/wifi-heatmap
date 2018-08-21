@@ -19,7 +19,7 @@
 # Author: Andres Blanco (6e726d)     <6e726d@gmail.com>
 #
 
-from compat import iteritems
+from .compat import iteritems
 
 from ctypes import *
 

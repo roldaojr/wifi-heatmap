@@ -41,6 +41,13 @@ from scipy.interpolate import Rbf
 import matplotlib.pyplot as plt
 import pylab
 
+if platform.system() == 'Windows':
+    from pywiwi.WindowsWifi import getWirelessInterfaces
+    from pywiwi.WindowsWifi import getWirelessNetworkBssList
+elif platform.system() == 'Linux':
+    from pyric import pyw
+    from wifi import Cell
+
 # Information on a single wireless AP
 Signal = collections.namedtuple('Signal', ['ssid', 'bssid', 'rssi'])
 
@@ -116,10 +123,9 @@ class WifiQuery(object):
 
     def _windows_get_signals(self):
         p = PointSignals()
-        from pywiwi.WindowsWifi import getWirelessInterfaces, getWirelessNetworkBssList
         for iface in getWirelessInterfaces():
             for cell in getWirelessNetworkBssList(iface):
-                s = Signal(ssid=str(cell.ssid), bssid=cell.bssid, rssi=cell.rssi)
+                s = Signal(ssid=cell.ssid.decode("utf-8"), bssid=cell.bssid, rssi=cell.rssi)
                 p.add_signal(s)
         return p
 
@@ -131,6 +137,14 @@ class WifiQuery(object):
                               '(\S+)\s+(..:..:..:..:..:..)\s+([\d-]+)', out):
             s = Signal(ssid=ssid, bssid=bssid, rssi=int(rssi))
             p.add_signal(s)
+        return p
+
+    def _linux_get_signals(self):
+        p = PointSignals()
+        for iface in pyw.winterfaces():
+            for cell in Cell.all(iface):
+                s = Signal(ssid=cell.ssid, bssid=cell.address, rssi=cell.signal)
+                p.add_signal(s)
         return p
 
 
