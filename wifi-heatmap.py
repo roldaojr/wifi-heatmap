@@ -158,6 +158,14 @@ class FloorPlan(QLabel):
 
         self.setCursor(Qt.CrossCursor)
 
+    def load_image(self, file_name):
+        p = self.pixmap()
+        p.load(file_name)
+        self.setFixedSize(p.width(), p.height())
+        self._signals = Signals()
+        for label in self.findChildren(QLabel):
+            label.deleteLater()
+
     def mousePressEvent(self, event):
         if event.buttons() == Qt.LeftButton:
             pos = event.pos()
@@ -224,10 +232,8 @@ class App(QMainWindow):
         self.show()
 
     def load_image(self, file_name):
-        p = self.plan.pixmap()
-        p.load(file_name)
         self.image_file_name = file_name
-        self.plan.setFixedSize(p.width(), p.height())
+        self.plan.load_image(file_name)
 
     def open_floor_plan_dialog(self):
         options = QFileDialog.Options()
