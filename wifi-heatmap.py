@@ -167,9 +167,11 @@ class FloorPlan(QLabel):
             self.add_point_signals(pos, ps)
 
     def add_point_signals(self, pos, ps):
-        label = QLabel('X', self)
+        label = QLabel('\u274c', self)
         label.setToolTip(ps.get_text())
-        label.move(*pos)
+        label.setStyleSheet("QLabel { color : green; font: 16px }");
+        left, top = pos
+        label.move(left - 12, top - 12)
         label.show()
 
 
@@ -218,6 +220,7 @@ class App(QMainWindow):
         self.scrollArea = QScrollArea()
         self.scrollArea.setWidget(self.plan)
         self.setCentralWidget(self.scrollArea)
+        self.setMinimumSize(QtCore.QSize(600, 400))
         self.show()
 
     def load_image(self, file_name):
@@ -225,8 +228,6 @@ class App(QMainWindow):
         p.load(file_name)
         self.image_file_name = file_name
         self.plan.setFixedSize(p.width(), p.height())
-        self.setMaximumSize(QtCore.QSize(max(self.plan.width(), 400),
-                                         max(self.plan.height(), 400)))
 
     def open_floor_plan_dialog(self):
         options = QFileDialog.Options()
