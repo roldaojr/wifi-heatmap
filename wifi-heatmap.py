@@ -43,7 +43,33 @@ import pylab
 
 if platform.system() == 'Windows':
     from pywiwi.WindowsWifi import getWirelessInterfaces
-    from pywiwi.WindowsWifi import getWirelessNetworkBssList
+    from pywiwi.WindowsWifi import WirelessNetworkBss
+    from pywiwi.WindowsNativeWifiApi import (
+        WlanOpenHandle, WlanCloseHandle, WlanFreeMemory, WlanGetNetworkBssList,
+        WlanScan)
+    from ctypes import addressof
+
+    def getWirelessNetworkBssList(wireless_interface):
+        """Returns a list of WirelessNetworkBss objects based on the wireless
+           networks availables."""
+        networks = []
+        handle = WlanOpenHandle()
+        WlanScan(handle, wireless_interface.guid)
+        bss_list = WlanGetNetworkBssList(handle, wireless_interface.guid)
+        try:
+            # Handle the WLAN_BSS_LIST pointer to get a list of WLAN_BSS_ENTRY
+            # structures.
+            data_type = bss_list.contents.wlanBssEntries._type_
+            num = bss_list.contents.NumberOfItems
+            bsss_pointer = addressof(bss_list.contents.wlanBssEntries)
+            bss_entries_list = (data_type * num).from_address(bsss_pointer)
+            for bss_entry in bss_entries_list:
+                networks.append(WirelessNetworkBss(bss_entry))
+        finally:
+            WlanFreeMemory(bss_list)
+            WlanCloseHandle(handle)
+        return networks
+
 elif platform.system() == 'Linux':
     from pyric import pyw
     from wifi import Cell
@@ -129,7 +155,6 @@ class WifiQuery(object):
                 p.add_signal(s)
         return p
 
-
     def _darwin_get_signals(self):
         out = subprocess.check_output(['/System/Library/PrivateFrameworks/Apple80211.framework/Versions/Current/Resources/airport', '-s'], universal_newlines=True)
         p = PointSignals()
@@ -146,6 +171,22 @@ class WifiQuery(object):
                 s = Signal(ssid=cell.ssid, bssid=cell.address, rssi=cell.signal)
                 p.add_signal(s)
         return p
+
+
+class UiPointSignal(QLabel):
+    def __init__(self, parent, pos, ps, signals):
+        super().__init__('\u274c', parent)
+        self._signals = signals
+        self._pos = pos
+        self.setToolTip(ps.get_text())
+        self.setStyleSheet("QLabel { color : green; font: 16px }");
+        left, top = pos
+        self.move(left - 12, top - 12)
+
+    def mousePressEvent(self, event):
+        if event.buttons() == Qt.RightButton:
+            del self._signals._signals[self._pos]
+            self.deleteLater()
 
 
 class FloorPlan(QLabel):
@@ -175,11 +216,7 @@ class FloorPlan(QLabel):
             self.add_point_signals(pos, ps)
 
     def add_point_signals(self, pos, ps):
-        label = QLabel('\u274c', self)
-        label.setToolTip(ps.get_text())
-        label.setStyleSheet("QLabel { color : green; font: 16px }");
-        left, top = pos
-        label.move(left - 12, top - 12)
+        label = UiPointSignal(self, pos, ps, self._signals)
         label.show()
 
 
