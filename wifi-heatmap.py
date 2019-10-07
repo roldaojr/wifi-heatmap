@@ -40,6 +40,7 @@ import numpy as np
 from scipy.interpolate import Rbf
 import matplotlib.pyplot as plt
 import pylab
+import json
 
 if platform.system() == 'Windows':
     from pywiwi.WindowsWifi import getWirelessInterfaces
@@ -115,6 +116,13 @@ class Signals(object):
             for signal in sd.values():
                 seen[signal.bssid] = signal.ssid
         return sorted(seen.items(), key=operator.itemgetter(0))
+
+    def write_json(self, jsonfile):
+        points = []
+        for pos, ps in self.positions():
+            signals = [s._asdict() for s in ps.values()]
+            points.append({'coordinates': pos, 'signals': signals})
+        jsonfile.write(json.dumps(points, indent=4))
 
     def write_csv(self, csvfile):
         w = csv.writer(csvfile)
@@ -281,11 +289,15 @@ class App(QMainWindow):
 
     def save_survey(self):
         options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getSaveFileName(self, "Select CSV file",
-                       "","All Files (*);;CSV Files (*.csv)", options=options)
+        file_name, file_fmt = QFileDialog.getSaveFileName(
+            self, "Save survey", "","CSV Files (*.csv);;JSON (*.json);;All Files (*)",
+            options=options)
         if file_name:
-            with open(file_name, 'w', newline='') as csvfile:
-                self.plan._signals.write_csv(csvfile)
+            with open(file_name, 'w', newline='') as surveyfile:
+                if file_fmt.find('.json') != -1:
+                    self.plan._signals.write_json(surveyfile)
+                else:
+                    self.plan._signals.write_csv(surveyfile)
             print('file saved as ' + file_name)
 
     def load_survey(self):
