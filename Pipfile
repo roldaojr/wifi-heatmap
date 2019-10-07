@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+matplotlib = ">=2.2"
+numpy = ">=1.14"
+scipy = ">=1.1"
+Pillow = ">=5.1"
+PyQt5 = ">=5.10"
+wifi = { version = "*", sys.platform = "== 'linux'" }
+pyric = { version = "*", sys.platform = "== 'linux'" }
+
+[dev-packages]
+
+[requires]
+python_version = "3"
